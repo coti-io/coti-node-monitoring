@@ -159,7 +159,7 @@ Parameters:
 | influxdb_server_address | URL of InfluxDB     | http://localhost:8086    | http://10.0.0.20:8086     |
 | influxdb_password*  | User pwd for InfluxDB  | None    | <any string>                |
 | logstash_server_address | URL of logstash     | localhost:5044    | 10.0.0.20:5044     |
-| filebeat_logs_paths* | location of logs, filebeat config cormat     | None    | /opt/http/testnet-staging-fullnode1/logs/FullNode1*.log     |
+| filebeat_logs_paths* | location of logs, filebeat config cormat     | None    | ~/coti-node/logs/FullNode1*.log     |
 
 	
 Please note: logstash server ip needs to be provided without the protocol (so no "http://" part!)

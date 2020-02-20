@@ -1,0 +1,2 @@
+- pipeline.id: beat-java
+  path.config: "/usr/share/logstash/pipeline/beat-java-logger-pipeline.conf"

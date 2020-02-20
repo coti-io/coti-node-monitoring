@@ -1,0 +1,64 @@
+version: "3.5"
+services:
+  grafana:
+    image: grafana/grafana:6.3.6
+    container_name: grafana
+    restart: always
+    ports:
+      - 3000:3000
+    networks:
+      - monitoring
+    volumes:
+      - grafana-volume:/var/lib/grafana
+    depends_on:
+      - "elasticsearch"
+      - "influxdb"
+  influxdb:
+    image: influxdb
+    container_name: influxdb
+    restart: always
+    ports:
+      - 8086:8086
+    networks:
+      - monitoring
+    volumes:
+      - influxdb-volume:/var/lib/influxdb
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.4.0
+    container_name: elasticsearch
+    restart: always
+    environment:
+      - cluster.name=docker-cluster
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=${es_java_opts}"
+      - "discovery.type=single-node"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - es-volume:/var/lib/elasticsearch
+    ports:
+      - 9200:9200
+    networks:
+      - monitoring
+  logstash:
+    image: ${logstash_image_name}
+    container_name: logstash
+    restart: always
+    ports:
+      - 5044:5044
+    networks:
+      - monitoring
+    depends_on:
+      - "elasticsearch"
+networks:
+  monitoring:
+    external: true
+volumes:
+  grafana-volume:
+    external: true
+  influxdb-volume:
+    external: true
+  es-volume:
+    external: true

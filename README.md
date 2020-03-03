@@ -23,6 +23,12 @@ Following is a list of required software needed to create (and operate) the basi
 - Curl
 - jq
 
+We add execute permission to all shell scripts for all users:
+
+```
+chmod +x *.sh
+```
+
 ### Auto
 Requires root permissions. 
 
@@ -31,7 +37,7 @@ Execute setup.sh script, to install all dependencies.
 We assume that curl is already installed.
 
 ```
-sudo /setup.sh
+sudo ./setup.sh
 ```
 
 ## Architecture
@@ -120,7 +126,6 @@ Parameters:
 | docker_network*     | The docker network that all containers will connect to | None | monitoring |
 | es_java_opts*       | Setting ElasticSearch heap zise  | None    | "-Xms4g -Xmx4g"   |
 | grafana_admin_pwd*  | admin password of grafana  | None    | <any string>   |
-| grafana_admin_new_pwd | admin new password of grafana  | None    | <any string>   |
 	
 
 
@@ -159,7 +164,7 @@ Parameters:
 | influxdb_server_address | URL of InfluxDB     | http://localhost:8086    | http://10.0.0.20:8086     |
 | influxdb_password*  | User pwd for InfluxDB  | None    | <any string>                |
 | logstash_server_address | URL of logstash     | localhost:5044    | 10.0.0.20:5044     |
-| filebeat_logs_paths* | location of logs, filebeat config cormat     | None    | ~/coti-node/logs/FullNode1*.log     |
+| filebeat_logs_paths* | location of logs, filebeat config format     | None    | ~/coti-node/logs/FullNode1.log     |
 
 	
 Please note: logstash server ip needs to be provided without the protocol (so no "http://" part!)

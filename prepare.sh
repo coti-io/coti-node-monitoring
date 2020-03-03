@@ -42,9 +42,6 @@ read_args() {
         ;;
       --grafana_admin_pwd=*)
         grafana_admin_pwd="${1#*=}"
-        ;;
-      --grafana_admin_new_pwd=*)
-        grafana_admin_new_pwd="${1#*=}"
         ;;*)
 
       # Exit with a message
@@ -57,6 +54,31 @@ read_args() {
   skip_setup="${skip_setup:-"false"}"
   echo "skip_setup: ${skip_setup} "
 
+  # Required args validation
+  if [ "${logstash_image}" = "" ]; then
+    required_argument "logstash_image"  
+  fi
+  if [ "${influxdb_admin_pwd}" = "" ]; then
+    required_argument "influxdb_admin_pwd"  
+  fi
+  if [ "${influxdb_user_pwd}" = "" ]; then
+    required_argument "influxdb_user_pwd"
+  fi
+  if [ "${docker_network}" = "" ]; then
+    required_argument "docker_network"
+  fi
+  if [ "${es_java_opts}" = "" ]; then
+    required_argument "es_java_opts"
+  fi
+  if [ "${grafana_admin_pwd}" = "" ]; then
+    required_argument "grafana_admin_pwd"
+  fi
+
+}
+
+required_argument() {
+  argument_name="${1}"
+  retval_checks 1 "--${argument_name} is required as an argument" 
 }
 
 # verify that a program is installed
@@ -75,7 +97,8 @@ retval_checks() {
   exit_code="${1}"
   message="${2}"
   if [ "${exit_code}" != 0 ]; then
-    echo "${message}"
+    echo "${RED}${message}${COLOR_RESET}"
+    echo "${RED}Terminating the script${COLOR_RESET}"
     exit "${exit_code}"
   fi
 }
@@ -87,13 +110,13 @@ verify_env_ready() {
   retval_checks "${retval}" "Please install docker-compose and re-run"
 }
 
-# Build the logstash conatiner, with the relevant configuration
+# Build the logstash container, with the relevant configuration
 build_logstash_container() {
   logstash_image_name="${1}"
   cd logstash
 
   docker build --no-cache -t "${logstash_image_name}" .
-  retval_checks "${?}" "building the logstash image failed, please rebiew your scripts, or contact someone that knows...."
+  retval_checks "${?}" "building the logstash image failed, please review your scripts, or contact with Coti team members at discord"
   cd ..
 }
 
@@ -142,20 +165,20 @@ grafana_change_admin_pwd() {
   # Chenge admin pwd
   message=$(curl -s -X PUT \
     "${GRAFANA_API_PASSWORD}" \
-    -u admin:"${grafana_admin_pwd}" \
+    -u admin:admin \
     -H "Accept:application\/json" \
     -H "Content-Type:application\/json" \
     -d "{
-      \"oldPassword\": \""${grafana_admin_pwd}"\",
-      \"newPassword\": \""${grafana_admin_new_pwd}"\",
-      \"confirmNew\": \""${grafana_admin_new_pwd}"\"
+      \"oldPassword\": \""admin"\",
+      \"newPassword\": \""${grafana_admin_pwd}"\",
+      \"confirmNew\": \""${grafana_admin_pwd}"\"
     }" | jq '.message')
 
   if [ "${message}" = "\"User password changed\"" ]; then
     echo "${GREEN}Admin pwd changed:${COLOR_RESET} ${message}"
   else
     echo "${RED}Admin pwd change failed:${COLOR_RESET} ${message}"
-    echo "${RED}Terminating, no point in continue...${COLOR_RESET}"
+    echo "${RED}Terminating the script${COLOR_RESET}"
     exit 1
   fi
 }
@@ -225,25 +248,22 @@ setup_grafana() {
   echo "${YELLOW}Setting up Grafana${COLOR_RESET}"
 
   # Ping to verify that we have access to grafana
-  ping=$(curl -s -u admin:"${grafana_admin_pwd}" "${GRAFANA_API_PING}")
+  ping=$(curl -s -u admin:admin "${GRAFANA_API_PING}")
 
   # When ping returns something other than "Logged in", we would like to read the message returned from Grafana
   if [ ! "${ping}" = "Logged in" ]; then
     ping="${ping}" | jq ".message"
   fi
 
-  if [ "${ping}" = "\"Invalid username or password\"" ]; then
-    echo "${RED}Login to grafana failed: \"Invalid username or password\"${COLOR_RESET}"
-    echo "${RED}Terminating, no point in continue...${COLOR_RESET}"
-    exit 1
-  else
-    echo "DEBUG: ${ping}"
-    if ! [ "${grafana_admin_pwd}" = "${grafana_admin_new_pwd}" ]; then
-      # Chenge admin pwd only if there's a reason to
-      grafana_change_admin_pwd
-    fi
+  if [ "${ping}" = "{\"message\":\"Invalid username or password\"}" ]; then
+    retval_checks 1 "Login to grafana failed: \"Invalid username or password\""
   fi
 
+  echo "DEBUG: ${ping}"
+  if ! [ "${grafana_admin_pwd}" = "admin" ]; then
+    grafana_change_admin_pwd
+  fi
+  
   grafana_create_datasources
 
   grafana_create_dashboards
@@ -261,7 +281,7 @@ setup_grafana_datasource() {
   # Check if InfluxDB data source exists
   message=$(curl -s -X GET \
     "${GRAFANA_API_DATASOURCES_GET_BY_NAME}/${ds_name}" \
-    -u admin:"${grafana_admin_new_pwd}" \
+    -u admin:"${grafana_admin_pwd}" \
     -H "Accept: application/json" \
     -H "Content-Type: application/json"| jq ".message")
 
@@ -271,7 +291,7 @@ setup_grafana_datasource() {
 
     message=$(curl -s -X POST \
       "${GRAFANA_API_DATASOURCES}" \
-      -u admin:"${grafana_admin_new_pwd}" \
+      -u admin:"${grafana_admin_pwd}" \
       -H "Accept: application/json" \
       -H "Content-Type: application/json" \
       -d "${ds_payload}" | jq ".message")
@@ -297,14 +317,14 @@ setup_grafana_dashboard() {
 
   message=$(curl -s -X GET \
     "${GRAFANA_API_DASHBOARDS}/uid/${dashboard_uid}" \
-    -u admin:"${grafana_admin_new_pwd}" \
+    -u admin:"${grafana_admin_pwd}" \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" | jq ".message")
 
   if [ "${message}" = "\"Dashboard not found\"" ]; then
     message=$(curl -s -X POST \
       "${GRAFANA_API_DASHBOARDS}/db" \
-      -u admin:"${grafana_admin_new_pwd}" \
+      -u admin:"${grafana_admin_pwd}" \
       -H "Accept: application/json" \
       -H "Content-Type: application/json" \
       -d "${dashboard_json_path}" | jq ".status")
@@ -382,7 +402,7 @@ else
   if curl -s --head --request GET localhost:9200 | grep "200 OK" > /dev/null; then
     echo "${GREEN}Skip mode verified, continue to system configuration${COLOR_RESET}"
   else
-    echo "${RED}Syste, is up, cannot skip setup. Exit now${COLOR_RESET}"
+    echo "${RED}System is up, cannot skip setup. Exit now${COLOR_RESET}"
     exit 1
   fi
 fi

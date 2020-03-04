@@ -167,7 +167,7 @@
         "showHeader": true,
         "sort": {
           "col": 0,
-          "desc": false
+          "desc": true
         },
         "styles": [
           {
@@ -212,7 +212,7 @@
         "type": "table"
       }
     ],
-    "refresh": "",
+    "refresh": "5s",
     "schemaVersion": 19,
     "style": "dark",
     "tags": [],
@@ -247,8 +247,8 @@
         "1d"
       ]
     },
-    "timezone": "",
-    "title": "Logs - Elastic",
+    "timezone": "utc",
+    "title": "Coti Node Logs - Elasticsearch",
     "uid": "kjTPHcTZk",
     "version": 8
   }
